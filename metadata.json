@@ -1,0 +1,7 @@
+{
+  "name": "GTS CHITS",
+  "description": "A professional chit fund management system for tracking groups, members, and collections with automated reports and offline persistence.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
