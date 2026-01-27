@@ -11,14 +11,30 @@ export const cleanPhoneNumber = (phone: string): string => {
 };
 
 /**
- * Generates an Official WhatsApp API Link.
- * Using api.whatsapp.com is more reliable in APK WebViews than wa.me redirects.
+ * Generates the WhatsApp URL.
+ * For Android APKs (WebViews), we use the intent:// scheme which is the native 
+ * way to tell Android to open an app package, bypassing the WebView's internal navigation
+ * and preventing net::ERR_UNKNOWN_URL_SCHEME.
  */
 export const getWhatsAppUrl = (phone: string, message: string): string => {
   const cleaned = cleanPhoneNumber(phone);
-  // Strictly enforce 91 prefix for Indian numbers with no +, spaces or dashes
   const finalPhone = `91${cleaned}`;
-  return `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`;
+  const encodedText = encodeURIComponent(message);
+  
+  // Use a reliable detection for Android
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  
+  if (isAndroid) {
+    /**
+     * Native Android Intent format. 
+     * This instructs the Android OS directly to launch the com.whatsapp package 
+     * with the provided data, which is much more reliable in a WebView context.
+     */
+    return `intent://send?phone=${finalPhone}&text=${encodedText}#Intent;package=com.whatsapp;scheme=whatsapp;end;`;
+  }
+  
+  // Standard direct API for PC/Browsers
+  return `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodedText}`;
 };
 
 /**
