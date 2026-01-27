@@ -96,21 +96,20 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
   };
 
   /**
-   * Unified trigger for WhatsApp that works for both PC and Android APKs.
-   * On Android, Intent URIs must use window.location.assign or href to correctly 
-   * trigger the OS to intercept the call.
+   * Cross-Platform WhatsApp Launcher:
+   * Instead of navigating the current window (which fails in APKs),
+   * we create a hidden link and force it to open as an external intent.
    */
   const triggerWhatsApp = (phone: string, message: string) => {
     const url = getWhatsAppUrl(phone, message);
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    
-    if (isAndroid) {
-      // Direct navigation to trigger the intent:// protocol
-      window.location.href = url;
-    } else {
-      // New tab for standard browsers on PC
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+    const link = document.createElement('a');
+    link.href = url;
+    // target="_blank" is critical for APKs to recognize it as an external request
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleShareReceipt = (memberId: string) => {
@@ -133,7 +132,6 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Selection Header */}
       <div className="bg-white p-4 sm:p-6 rounded-sm border border-[#edebe9] shadow-sm space-y-4 no-print">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
@@ -182,7 +180,6 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
         </div>
       </div>
 
-      {/* Member List */}
       <div className="space-y-4">
         {selectedGroup ? (
           filteredGroupMembers.map(member => {
@@ -274,7 +271,6 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
         )}
       </div>
 
-      {/* QR Code Modal */}
       {activeQrMember && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-xs rounded-sm overflow-hidden shadow-2xl animate-in zoom-in-95">
