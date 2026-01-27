@@ -52,16 +52,22 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, 
     reader.readAsText(file);
   };
 
+  /**
+   * Diagnostic Trigger:
+   * Uses a hidden anchor with target="_blank" to force APKs to pass 
+   * the link to the Android OS intent system.
+   */
   const triggerWhatsAppTest = () => {
     if (testPhone.length !== 10) return alert('Enter 10-digit mobile number to test.');
     const url = getWhatsAppUrl(testPhone, "GTS CHITS: Connectivity Test Success! WhatsApp is linked to your APK correctly.");
-    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
     
-    if (isMobile) {
-      window.location.assign(url);
-    } else {
-      window.open(url, '_blank');
-    }
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (

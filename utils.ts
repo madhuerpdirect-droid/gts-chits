@@ -11,15 +11,14 @@ export const cleanPhoneNumber = (phone: string): string => {
 };
 
 /**
- * Generates an Official WhatsApp Universal Link.
- * format: https://wa.me/91[10digits]?text=[encoded_text]
- * This is the most reliable format for Android APK/WebView environments.
+ * Generates an Official WhatsApp API Link.
+ * Using api.whatsapp.com is more reliable in APK WebViews than wa.me redirects.
  */
 export const getWhatsAppUrl = (phone: string, message: string): string => {
   const cleaned = cleanPhoneNumber(phone);
   // Strictly enforce 91 prefix for Indian numbers with no +, spaces or dashes
   const finalPhone = `91${cleaned}`;
-  return `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
+  return `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`;
 };
 
 /**

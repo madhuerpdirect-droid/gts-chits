@@ -96,20 +96,19 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
   };
 
   /**
-   * Unified trigger for WhatsApp that works for both PC and Android APKs.
+   * Cross-Platform WhatsApp Trigger:
+   * Uses a hidden anchor with target="_blank" to force APKs to pass 
+   * the link to the Android OS intent system instead of the WebView.
    */
   const triggerWhatsApp = (phone: string, message: string) => {
     const url = getWhatsAppUrl(phone, message);
-    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-      // In mobile APKs/WebViews, location.assign triggers the Universal Link system 
-      // which opens the WhatsApp App directly. window.open is often blocked.
-      window.location.assign(url);
-    } else {
-      // On PC, window.open in a new tab is safer to keep the app state intact.
-      window.open(url, '_blank');
-    }
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const sendWhatsAppReceipt = (member: Member, payment: Payment) => {
@@ -182,7 +181,7 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
               placeholder="Instant Lookup: Name or Mobile"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full h-14 pl-12 pr-4 bg-[#faf9f8] border border-[#edebe9] rounded-sm text-base font-bold placeholder:text-[#c8c6c4]"
+              className="w-full h-14 pl-12 pr-4 bg-[#faf9f8] border border-[#edebe9] rounded-sm text base font-bold placeholder:text-[#c8c6c4]"
             />
           </div>
         </div>
