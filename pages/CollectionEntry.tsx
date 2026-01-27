@@ -95,6 +95,19 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
     alert(`Success: Recorded for ${member.name}`);
   };
 
+  const sendWhatsAppNotification = (member: Member, message: string) => {
+    const url = getWhatsAppUrl(member.phone, message);
+    const isAppProtocol = url.startsWith('whatsapp://');
+    
+    if (isAppProtocol) {
+      // Best for Mobile/Android APK to trigger app directly
+      window.location.href = url;
+    } else {
+      // Best for PC to open in a new tab without leaving the app
+      window.open(url, '_blank');
+    }
+  };
+
   const sendWhatsAppReceipt = (member: Member, payment: Payment) => {
     const phone = cleanPhoneNumber(member.phone);
     if (!phone || phone.length < 10) return alert('Error: Valid mobile number required.');
@@ -109,10 +122,7 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
       `*Status:* FULLY SETTLED\n\n` +
       `Thank you.\n*GTS CHITS*`;
 
-    const url = getWhatsAppUrl(member.phone, message);
-    // CRITICAL: Using window.location.href triggers the app intent on Android/iOS
-    // while window.open often defaults to the web browser interface.
-    window.location.href = url;
+    sendWhatsAppNotification(member, message);
   };
 
   const sendUpiRequest = (member: Member, amount: number) => {
@@ -130,9 +140,7 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
       `_Note: Tap the link above to pay directly via GPay/PhonePe._\n\n` +
       `*GTS CHITS*`;
     
-    const url = getWhatsAppUrl(member.phone, message);
-    // Using location.href ensures the mobile device's app association system captures the request.
-    window.location.href = url;
+    sendWhatsAppNotification(member, message);
   };
 
   return (

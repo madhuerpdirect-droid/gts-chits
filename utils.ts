@@ -11,16 +11,23 @@ export const cleanPhoneNumber = (phone: string): string => {
 };
 
 /**
- * Generates a WhatsApp universal link. 
- * Using wa.me with window.location.href is the most reliable way 
- * to trigger the mobile app instead of the web interface.
+ * Generates a WhatsApp URL. 
+ * Uses the whatsapp:// protocol on mobile devices to force the installed app 
+ * and prevent redirecting to WhatsApp Web in APK/WebView environments.
  */
 export const getWhatsAppUrl = (phone: string, message: string): string => {
   const cleaned = cleanPhoneNumber(phone);
-  // Strictly enforce 91 prefix for Indian numbers as required by WhatsApp API
   const finalPhone = cleaned.length === 10 ? `91${cleaned}` : cleaned;
   
-  return `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
+  const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    // whatsapp:// is a deep link protocol that triggers the app directly
+    return `whatsapp://send?phone=${finalPhone}&text=${encodeURIComponent(message)}`;
+  }
+  
+  // Standard API for desktop browsers
+  return `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`;
 };
 
 /**

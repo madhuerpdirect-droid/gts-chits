@@ -60,6 +60,17 @@ const Reports: React.FC<ReportsProps> = ({ groups, members, payments }) => {
     }
   };
 
+  const triggerWhatsApp = (phone: string, message: string) => {
+    const url = getWhatsAppUrl(phone, message);
+    const isAppProtocol = url.startsWith('whatsapp://');
+    
+    if (isAppProtocol) {
+      window.location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+
   const handleShareReport = () => {
     const summary = getReportSummary();
     const member = members.find(m => m.id === filters.memberId);
@@ -69,9 +80,7 @@ const Reports: React.FC<ReportsProps> = ({ groups, members, payments }) => {
     message += `Date: ${new Date().toLocaleDateString()}\n\n_Audit generated via GTS Cloud Management._`;
     
     const phone = member?.phone && cleanPhoneNumber(member.phone).length === 10 ? member.phone : '';
-    const url = getWhatsAppUrl(phone, message);
-    // Direct location assignment is better for mobile intent triggering
-    window.location.href = url;
+    triggerWhatsApp(phone, message);
   };
 
   const renderReportContent = () => {
@@ -79,7 +88,7 @@ const Reports: React.FC<ReportsProps> = ({ groups, members, payments }) => {
       case 'Candidate':
         return <CandidateReport members={members} payments={payments} groups={groups} filters={filters} />;
       case 'Due':
-        return <DueReport members={members} payments={payments} groups={groups} filters={filters} />;
+        return <DueReport members={members} payments={payments} groups={groups} filters={filters} triggerWhatsApp={triggerWhatsApp} />;
       case 'Consolidated':
         return <ConsolidatedReport groups={groups} members={members} payments={payments} filters={filters} />;
       case 'Individual':
@@ -234,7 +243,7 @@ const CandidateReport: React.FC<any> = ({ members, payments, groups, filters }) 
   );
 };
 
-const DueReport: React.FC<any> = ({ members, payments, groups, filters }) => {
+const DueReport: React.FC<any> = ({ members, payments, groups, filters, triggerWhatsApp }) => {
   const group = groups.find((g: any) => g.id === filters.groupId);
   if (!group) return <EmptyState label="Portfolio Selection Needed" icon={ClipboardList} />;
   const month = filters.month;
@@ -243,9 +252,7 @@ const DueReport: React.FC<any> = ({ members, payments, groups, filters }) => {
   const sendReminder = (member: Member) => {
     const amount = calculateExpectedAmount(group, member, month);
     const msg = generateReminderMessage(member, group, month, amount);
-    const url = getWhatsAppUrl(member.phone, msg);
-    // CRITICAL: window.location.href ensures the app is launched directly on Android
-    window.location.href = url;
+    triggerWhatsApp(member.phone, msg);
   };
 
   return (
