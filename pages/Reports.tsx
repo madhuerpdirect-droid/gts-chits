@@ -61,18 +61,18 @@ const Reports: React.FC<ReportsProps> = ({ groups, members, payments }) => {
   };
 
   /**
-   * Official way to trigger WhatsApp from a WebView (APK):
-   * Creating a dummy anchor and clicking it with target="_blank"
+   * Universal WhatsApp trigger.
+   * On mobile/APK, window.location.assign is used to pass navigation to the OS.
    */
   const triggerWhatsApp = (phone: string, message: string) => {
     const url = getWhatsAppUrl(phone, message);
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      window.location.assign(url);
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleShareReport = () => {

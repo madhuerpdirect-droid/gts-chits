@@ -12,13 +12,15 @@ export const cleanPhoneNumber = (phone: string): string => {
 
 /**
  * Generates an Official WhatsApp API Link.
- * Using api.whatsapp.com is more robust for Android WebViews than wa.me.
+ * Using api.whatsapp.com is more robust for Android WebViews (APKs) than wa.me 
+ * because wa.me performs a redirect to the whatsapp:// scheme, which often 
+ * triggers the ERR_UNKNOWN_URL_SCHEME error in restrictive internal browsers.
  */
 export const getWhatsAppUrl = (phone: string, message: string): string => {
   const cleaned = cleanPhoneNumber(phone);
-  // Ensure the 91 prefix is present and the number is exactly 12 digits (91 + 10 digits)
   const finalPhone = `91${cleaned}`;
   const encodedText = encodeURIComponent(message);
+  // Using the direct API endpoint instead of the shortener to bypass redirects
   return `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodedText}`;
 };
 

@@ -96,20 +96,23 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
   };
 
   /**
-   * Cross-Platform WhatsApp Launcher:
-   * Instead of navigating the current window (which fails in APKs),
-   * we create a hidden link and force it to open as an external intent.
+   * Final WhatsApp Fix for APKs:
+   * Instead of window.open, which many WebViews handle by opening an internal window,
+   * we use window.location.assign. This tells the WebView to "navigate" to the link, 
+   * which then allows the Android System's intent-filter to catch the HTTPS link 
+   * and open the WhatsApp app automatically.
    */
   const triggerWhatsApp = (phone: string, message: string) => {
     const url = getWhatsAppUrl(phone, message);
-    const link = document.createElement('a');
-    link.href = url;
-    // target="_blank" is critical for APKs to recognize it as an external request
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Direct navigation is best for WebViews to trigger external intents
+      window.location.assign(url);
+    } else {
+      // Desktop still works best with a new tab
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleShareReceipt = (memberId: string) => {
