@@ -95,15 +95,19 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
     alert(`Success: Recorded for ${member.name}`);
   };
 
-  const sendWhatsAppNotification = (member: Member, message: string) => {
-    const url = getWhatsAppUrl(member.phone, message);
-    const isAppProtocol = url.startsWith('whatsapp://');
+  /**
+   * Unified trigger for WhatsApp that works for both PC and Android APKs.
+   */
+  const triggerWhatsApp = (phone: string, message: string) => {
+    const url = getWhatsAppUrl(phone, message);
+    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
     
-    if (isAppProtocol) {
-      // Best for Mobile/Android APK to trigger app directly
-      window.location.href = url;
+    if (isMobile) {
+      // In mobile APKs/WebViews, location.assign triggers the Universal Link system 
+      // which opens the WhatsApp App directly. window.open is often blocked.
+      window.location.assign(url);
     } else {
-      // Best for PC to open in a new tab without leaving the app
+      // On PC, window.open in a new tab is safer to keep the app state intact.
       window.open(url, '_blank');
     }
   };
@@ -122,7 +126,7 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
       `*Status:* FULLY SETTLED\n\n` +
       `Thank you.\n*GTS CHITS*`;
 
-    sendWhatsAppNotification(member, message);
+    triggerWhatsApp(member.phone, message);
   };
 
   const sendUpiRequest = (member: Member, amount: number) => {
@@ -140,7 +144,7 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
       `_Note: Tap the link above to pay directly via GPay/PhonePe._\n\n` +
       `*GTS CHITS*`;
     
-    sendWhatsAppNotification(member, message);
+    triggerWhatsApp(member.phone, message);
   };
 
   return (

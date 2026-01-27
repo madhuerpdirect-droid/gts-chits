@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { Download, Upload, Trash2, Database, ShieldAlert, FileJson, ShieldCheck, Clock, Smartphone, Info } from 'lucide-react';
+import { Download, Upload, Trash2, Database, ShieldAlert, FileJson, ShieldCheck, Clock, Smartphone, Info, MessageSquare } from 'lucide-react';
 import { ChitGroup, Member, Payment } from '../types';
 import { getLastBackupDate, updateLastBackupTimestamp } from '../storage';
+import { getWhatsAppUrl } from '../utils';
 
 interface SettingsPageProps {
   groups: ChitGroup[];
@@ -17,6 +18,7 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, setGroups, setMembers, setPayments, upiId, setUpiId }) => {
   const [lastBackup, setLastBackup] = useState<string | null>(getLastBackupDate());
+  const [testPhone, setTestPhone] = useState('');
 
   const exportAllData = () => {
     const data = { groups, members, payments };
@@ -48,6 +50,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, 
       } catch (err) { alert('Invalid Database Format'); }
     };
     reader.readAsText(file);
+  };
+
+  const triggerWhatsAppTest = () => {
+    if (testPhone.length !== 10) return alert('Enter 10-digit mobile number to test.');
+    const url = getWhatsAppUrl(testPhone, "GTS CHITS: Connectivity Test Success! WhatsApp is linked to your APK correctly.");
+    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      window.location.assign(url);
+    } else {
+      window.open(url, '_blank');
+    }
   };
 
   return (
@@ -101,20 +115,51 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, 
           </div>
         </div>
 
+        {/* WhatsApp APK Diagnostic */}
+        <div className="bg-white p-8 rounded-sm border border-[#edebe9] shadow-sm flex flex-col">
+          <div className="flex items-center gap-3 mb-6 border-b border-[#f3f2f1] pb-4">
+            <MessageSquare className="w-4 h-4 text-[#107c10]" />
+            <h3 className="font-bold text-[#323130] uppercase text-[10px] tracking-widest">WhatsApp APK Diagnostic</h3>
+          </div>
+          <div className="space-y-4 flex-1">
+             <div className="flex gap-2">
+                <input 
+                  type="tel"
+                  maxLength={10}
+                  placeholder="Test Mobile Number"
+                  value={testPhone}
+                  onChange={e => setTestPhone(e.target.value.replace(/\D/g, ''))}
+                  className="flex-1 px-4 py-3 bg-[#faf9f8] border border-[#edebe9] rounded-sm font-bold text-sm"
+                />
+                <button 
+                  onClick={triggerWhatsAppTest}
+                  className="bg-[#107c10] text-white px-4 py-2 rounded-sm font-black text-[9px] uppercase tracking-widest"
+                >
+                  Test Intent
+                </button>
+             </div>
+             <p className="text-[9px] text-[#605e5c] font-bold uppercase leading-relaxed">
+                CROSS-CHECK: Enter your own number and tap "Test Intent". If it opens WhatsApp, the system is fully compatible with your Android APK.
+             </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
         {/* Maintenance Controls */}
         <div className="bg-white p-8 rounded-sm border border-[#edebe9] shadow-sm flex flex-col">
           <div className="flex items-center gap-3 mb-6 border-b border-[#f3f2f1] pb-4">
             <FileJson className="w-4 h-4 text-[#0078d4]" />
             <h3 className="font-bold text-[#323130] uppercase text-[10px] tracking-widest">Maintenance & Migration</h3>
           </div>
-          <div className="space-y-3 flex-1">
+          <div className="flex flex-col sm:flex-row gap-3">
              <button 
                 onClick={exportAllData}
-                className="w-full flex items-center justify-center gap-2 bg-[#323130] text-white py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-black transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 bg-[#323130] text-white py-4 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-black transition-colors"
               >
                 <Download className="w-3.5 h-3.5" /> Archive Database (JSON)
               </button>
-              <label className="w-full flex items-center justify-center gap-2 bg-white text-[#323130] border border-[#edebe9] py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-[#faf9f8] cursor-pointer transition-colors">
+              <label className="flex-1 flex items-center justify-center gap-2 bg-white text-[#323130] border border-[#edebe9] py-4 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-[#faf9f8] cursor-pointer transition-colors">
                 <Upload className="w-3.5 h-3.5 text-[#0078d4]" /> Restore Repository
                 <input type="file" accept=".json" onChange={handleImport} className="hidden" />
               </label>

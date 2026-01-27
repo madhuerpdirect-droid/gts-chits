@@ -11,23 +11,15 @@ export const cleanPhoneNumber = (phone: string): string => {
 };
 
 /**
- * Generates a WhatsApp URL. 
- * Uses the whatsapp:// protocol on mobile devices to force the installed app 
- * and prevent redirecting to WhatsApp Web in APK/WebView environments.
+ * Generates an Official WhatsApp Universal Link.
+ * format: https://wa.me/91[10digits]?text=[encoded_text]
+ * This is the most reliable format for Android APK/WebView environments.
  */
 export const getWhatsAppUrl = (phone: string, message: string): string => {
   const cleaned = cleanPhoneNumber(phone);
-  const finalPhone = cleaned.length === 10 ? `91${cleaned}` : cleaned;
-  
-  const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
-  
-  if (isMobile) {
-    // whatsapp:// is a deep link protocol that triggers the app directly
-    return `whatsapp://send?phone=${finalPhone}&text=${encodeURIComponent(message)}`;
-  }
-  
-  // Standard API for desktop browsers
-  return `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`;
+  // Strictly enforce 91 prefix for Indian numbers with no +, spaces or dashes
+  const finalPhone = `91${cleaned}`;
+  return `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
 };
 
 /**
