@@ -1,8 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Member, ChitGroup, Payment } from '../types';
-import { Plus, Search, Trash2, Award, CheckCircle2, X, AlertCircle, ShieldAlert, Users, LayoutList, ArrowLeft } from 'lucide-react';
-import { formatCurrency, getCurrentChitMonth, cleanPhoneNumber } from '../utils';
+import { Plus, Search, Trash2, X, Users, User, FileDown, Upload, FileSpreadsheet, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
+import { getCurrentChitMonth, cleanPhoneNumber } from '../utils';
+import * as XLSX from 'xlsx';
 
 interface CandidatesProps {
   members: Member[];
@@ -13,7 +14,11 @@ interface CandidatesProps {
 
 const Candidates: React.FC<CandidatesProps> = ({ members, setMembers, groups, payments }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [bulkTargetGroup, setBulkTargetGroup] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState<Partial<Member>>({
     name: '', groupId: '', phone: '', address: '', email: '', idProofType: 'Aadhar',
     idProofNumber: '', nomineeName: '', nomineeRelation: '',
@@ -31,10 +36,10 @@ const Candidates: React.FC<CandidatesProps> = ({ members, setMembers, groups, pa
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.groupId || !formData.phone) {
-      return alert('Error: Mandatory fields must be completed.');
+      return alert('Complete mandatory fields.');
     }
     if (isSlotFull) {
-      return alert('REGISTRATION BLOCKED: Group capacity exceeded.');
+      return alert('Error: Group capacity exceeded.');
     }
 
     const sanitizedPhone = cleanPhoneNumber(formData.phone);
@@ -60,208 +65,275 @@ const Candidates: React.FC<CandidatesProps> = ({ members, setMembers, groups, pa
     setFormData({ name: '', groupId: '', phone: '', address: '', email: '', joiningDate: new Date().toISOString().split('T')[0], isPrized: false, status: 'Active' });
   };
 
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        "Full Name": "John Doe",
+        "Phone Number": "9876543210",
+        "Chit Group Name": groups[0]?.name || "Example Group A",
+        "Address": "123 Street, City",
+        "Email": "john@example.com",
+        "ID Proof Type": "Aadhar",
+        "ID Proof Number": "1234-5678-9012",
+        "Nominee Name": "Jane Doe",
+        "Nominee Relation": "Spouse"
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "GTS_Bulk_Onboarding_Template.xlsx");
+  };
+
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      const data = XLSX.utils.sheet_to_json(ws);
+      
+      const newMembers: Member[] = [];
+      const currentCounts: Record<string, number> = {};
+      
+      // Pre-calculate current member counts for capacity check
+      groups.forEach(g => {
+        currentCounts[g.id] = members.filter(m => m.groupId === g.id).length;
+      });
+
+      data.forEach((row: any) => {
+        const name = row["Full Name"] || row["Name"];
+        const phone = row["Phone Number"] || row["Phone"] || row["Mobile"];
+        const rowGroupName = row["Chit Group Name"] || row["Group Name"] || row["Group"];
+        
+        // Find group by name from Excel row
+        const groupFromRow = groups.find(g => 
+          g.name.toLowerCase().trim() === String(rowGroupName || '').toLowerCase().trim()
+        );
+        
+        // Fallback to bulkTargetGroup if row group name is missing or invalid
+        const finalGroupId = groupFromRow ? groupFromRow.id : bulkTargetGroup;
+        
+        if (name && phone && finalGroupId) {
+          const group = groups.find(g => g.id === finalGroupId);
+          const capacity = group?.memberCount || 100000;
+          
+          if ((currentCounts[finalGroupId] || 0) < capacity) {
+            newMembers.push({
+              id: Math.random().toString(36).substr(2, 9),
+              name: String(name),
+              groupId: finalGroupId,
+              phone: cleanPhoneNumber(String(phone)),
+              address: String(row["Address"] || ''),
+              email: String(row["Email"] || ''),
+              idProofType: String(row["ID Proof Type"] || 'Aadhar'),
+              idProofNumber: String(row["ID Proof Number"] || ''),
+              nomineeName: String(row["Nominee Name"] || ''),
+              nomineeRelation: String(row["Nominee Relation"] || ''),
+              joiningDate: new Date().toISOString().split('T')[0],
+              isPrized: false,
+              status: 'Active'
+            });
+            currentCounts[finalGroupId] = (currentCounts[finalGroupId] || 0) + 1;
+          }
+        }
+      });
+
+      if (newMembers.length > 0) {
+        setMembers(prev => [...prev, ...newMembers]);
+        alert(`Bulk Action Success: Onboarded ${newMembers.length} subscribers across chosen groups.`);
+        setIsBulkModalOpen(false);
+      } else {
+        alert("Import Failed: No valid subscriber data found or all selected groups are already at full capacity.");
+      }
+    };
+    reader.readAsBinaryString(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const filteredMembers = members.filter(m => 
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.phone.includes(searchTerm)
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print bg-white p-4 rounded-sm border border-[#edebe9] shadow-sm">
-        <div className="relative flex-1 max-w-md">
+    <div className="space-y-4 pb-20">
+      {/* Mobile Top Controls */}
+      <div className="bg-white p-4 rounded-sm border border-[#edebe9] shadow-sm space-y-3 no-print">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a19f9d]" />
           <input
             type="text"
-            placeholder="Search Subscriber Registry..."
+            placeholder="Search Registry..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm outline-none"
+            className="w-full h-11 pl-10 pr-4 bg-[#faf9f8] border border-[#edebe9] rounded-sm text-sm font-semibold"
           />
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-[#0078d4] text-white px-8 py-2.5 rounded-sm font-bold text-xs uppercase tracking-widest hover:bg-[#106ebe] transition-all shadow-md active:scale-95"
-        >
-          <Plus className="w-4 h-4" /> Add Subscriber
-        </button>
-      </div>
-
-      <div className="bg-white border border-[#edebe9] rounded-sm overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-[#faf9f8] border-b border-[#edebe9]">
-              <tr className="text-[10px] font-bold text-[#605e5c] uppercase tracking-widest">
-                <th className="px-6 py-4">Identity Profile</th>
-                <th className="px-6 py-4">Portfolio Assignment</th>
-                <th className="px-6 py-4 text-center">Ledger Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#f3f2f1]">
-              {filteredMembers.map(member => {
-                const group = groups.find(g => g.id === member.groupId);
-                const currentMonth = group ? getCurrentChitMonth(group.startDate) : 1;
-                const hasPaidCurrent = payments.some(p => p.memberId === member.id && p.monthNumber === currentMonth);
-                return (
-                  <tr key={member.id} className="hover:bg-[#fcfcfc] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-sm bg-[#deecf9] flex items-center justify-center text-[#0078d4] font-bold text-xs">{member.name.charAt(0)}</div>
-                        <div>
-                          <p className="text-sm font-bold text-[#323130]">{member.name}</p>
-                          <p className="text-[10px] text-[#605e5c] font-semibold uppercase">{member.phone}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-xs font-bold text-[#323130]">{group?.name || 'Unassigned'}</p>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {hasPaidCurrent ? (
-                        <span className="text-[10px] font-bold text-[#107c10] uppercase flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Settled</span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-[#a4262c] uppercase flex items-center justify-center gap-1.5"><AlertCircle className="w-3.5 h-3.5" /> Due</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                       <button onClick={() => setMembers(members.filter(m => m.id !== member.id))} className="text-[#a19f9d] hover:text-[#a4262c] p-2 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredMembers.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-20 text-center">
-                    <Users className="w-12 h-12 text-[#f3f2f1] mx-auto mb-4" />
-                    <p className="text-[10px] font-bold text-[#c8c6c4] uppercase tracking-widest">No matching subscribers in registry</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-2 gap-2">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="h-12 bg-[#0078d4] text-white flex items-center justify-center gap-2 rounded-sm font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
+          >
+            <Plus className="w-4 h-4" /> Single Entry
+          </button>
+          <button 
+            onClick={() => setIsBulkModalOpen(true)}
+            className="h-12 bg-[#323130] text-white flex items-center justify-center gap-2 rounded-sm font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Bulk XL
+          </button>
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm overflow-y-auto flex items-start justify-center pt-2 sm:pt-6 pb-20 px-4">
-          <div className="bg-white rounded-sm w-full max-w-2xl shadow-2xl border border-[#edebe9] animate-in fade-in zoom-in-95 relative flex flex-col min-h-0 max-h-[95vh]">
-            {/* Modal Header - High Visibility */}
-            <div className="bg-[#faf9f8] px-8 py-5 border-b border-[#edebe9] flex items-center justify-between sticky top-0 z-20 shadow-sm">
-              <div className="flex items-center gap-3">
-                 <div className="bg-[#0078d4] p-1.5 rounded-sm shadow-sm"><LayoutList className="w-4 h-4 text-white" /></div>
-                 <h2 className="text-lg font-bold text-[#323130] uppercase tracking-tighter">Subscriber Registry Entry</h2>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-[#a19f9d] hover:text-[#323130] p-2 transition-colors"><X className="w-6 h-6" /></button>
+      {/* Registry List */}
+      <div className="space-y-3">
+        {filteredMembers.map(member => {
+          const group = groups.find(g => g.id === member.groupId);
+          const currentMonth = group ? getCurrentChitMonth(group.startDate) : 1;
+          const hasPaidCurrent = payments.some(p => p.memberId === member.id && p.monthNumber === currentMonth);
+          
+          return (
+            <div key={member.id} className="bg-white p-4 rounded-sm border border-[#edebe9] shadow-sm flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#deecf9] text-[#0078d4] flex items-center justify-center rounded-sm font-black text-xl">
+                    {member.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="text-[15px] font-black">{member.name}</h4>
+                    <p className="text-[10px] font-bold text-[#605e5c] uppercase">{group?.name || 'Pending Group'}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                       <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase ${hasPaidCurrent ? 'bg-[#dff6dd] text-[#107c10]' : 'bg-[#fde7e9] text-[#a4262c]'}`}>
+                         {hasPaidCurrent ? 'Settled' : 'Unpaid'}
+                       </span>
+                       <span className="text-[9px] font-bold text-[#a19f9d] uppercase">{member.phone}</span>
+                    </div>
+                  </div>
+               </div>
+               <button onClick={() => setMembers(members.filter(m => m.id !== member.id))} className="p-3 text-[#a19f9d] active:text-[#a4262c]">
+                  <Trash2 className="w-5 h-5" />
+               </button>
             </div>
+          );
+        })}
+        {filteredMembers.length === 0 && (
+          <div className="py-20 text-center opacity-30">
+            <Users className="w-16 h-16 mx-auto mb-4" />
+            <p className="font-black uppercase text-xs tracking-widest">Registry Empty</p>
+          </div>
+        )}
+      </div>
 
-            {/* Error Blocking Overlay */}
-            {isSlotFull && (
-              <div className="absolute inset-0 z-30 bg-white/95 backdrop-blur-sm flex items-center justify-center p-8 text-center animate-in fade-in">
-                <div className="max-w-xs space-y-6">
-                  <div className="bg-[#fde7e9] w-20 h-20 rounded-full flex items-center justify-center mx-auto border-4 border-white shadow-lg">
-                    <ShieldAlert className="w-10 h-10 text-[#a4262c]" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-black text-[#a4262c] uppercase tracking-tight">Slot Capacity Overflow</h3>
-                    <p className="text-xs font-bold text-[#605e5c] uppercase leading-relaxed">
-                      Enrollment for "{selectedGroup?.name}" is prohibited. Capacity: {currentMemberCount}/{selectedGroup?.memberCount}.
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => setFormData({...formData, groupId: ''})}
-                    className="w-full bg-[#323130] text-white py-4 rounded-sm font-bold text-xs uppercase tracking-widest shadow-md active:scale-95 transition-all"
-                  >
-                    Select Alternative Portfolio
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="p-8 space-y-8 overflow-y-auto flex-1 scroll-smooth">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* TOP FIELDS MUST BE FIRST & CLEAR */}
-                <div className="space-y-6">
+      {/* SINGLE ENTRY MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+          <div className="bg-white w-full max-w-lg h-[90vh] sm:h-auto rounded-t-xl sm:rounded-sm overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-bottom-10">
+            <div className="p-5 border-b border-[#edebe9] flex justify-between items-center bg-[#faf9f8]">
+               <div className="flex items-center gap-2">
+                 <User className="w-5 h-5 text-[#0078d4]" />
+                 <h3 className="font-black uppercase text-sm tracking-tight">Manual Enrollment</h3>
+               </div>
+               <button onClick={() => setIsModalOpen(false)} className="p-2"><X className="w-6 h-6 text-[#605e5c]" /></button>
+            </div>
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 scroll-container">
+               <div className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-[#605e5c] uppercase mb-2 tracking-widest">Full Subscriber Name*</label>
-                    <input 
-                      required 
-                      type="text" 
-                      placeholder="Legal Identity Name" 
-                      value={formData.name} 
-                      onChange={e => setFormData({...formData, name: e.target.value})} 
-                      className="w-full px-4 py-3 text-sm font-bold text-[#323130] bg-white border border-[#edebe9] focus:bg-white shadow-sm" 
-                    />
+                    <label className="block text-[10px] font-black text-[#605e5c] uppercase mb-1 tracking-widest">Full Name*</label>
+                    <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full h-12 px-4 bg-[#faf9f8] border-none font-bold text-base" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-[#605e5c] uppercase mb-2 tracking-widest">Target Portfolio Assignment*</label>
-                    <select 
-                      required 
-                      value={formData.groupId} 
-                      onChange={e => setFormData({...formData, groupId: e.target.value})} 
-                      className="w-full px-4 py-3 text-sm font-bold text-[#0078d4] bg-white border border-[#edebe9] shadow-sm"
-                    >
-                      <option value="">Select Target Portfolio...</option>
-                      {groups.map(g => (
-                        <option key={g.id} value={g.id}>{g.name} (Max: {g.memberCount})</option>
-                      ))}
+                    <label className="block text-[10px] font-black text-[#605e5c] uppercase mb-1 tracking-widest">Portfolio*</label>
+                    <select required value={formData.groupId} onChange={e => setFormData({...formData, groupId: e.target.value})} className="w-full h-12 px-4 bg-[#faf9f8] border-none font-black text-sm text-[#0078d4]">
+                      <option value="">Choose Portfolio Master...</option>
+                      {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-[#605e5c] uppercase mb-2 tracking-widest">Mobile Contact Number*</label>
-                    <input 
-                      required 
-                      type="tel" 
-                      maxLength={10} 
-                      placeholder="10 Digits Mandatory" 
-                      value={formData.phone} 
-                      onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})} 
-                      className="w-full px-4 py-3 text-sm font-bold text-[#323130] bg-white border border-[#edebe9] shadow-sm" 
-                    />
+                    <label className="block text-[10px] font-black text-[#605e5c] uppercase mb-1 tracking-widest">Phone Number*</label>
+                    <input required type="tel" maxLength={10} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})} className="w-full h-12 px-4 bg-[#faf9f8] border-none font-black text-base" />
                   </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-[10px] font-bold text-[#605e5c] uppercase mb-2 tracking-widest">Physical Residential Address*</label>
-                    <textarea 
-                      required 
-                      rows={2} 
-                      placeholder="House, Street, Area" 
-                      value={formData.address} 
-                      onChange={e => setFormData({...formData, address: e.target.value})} 
-                      className="w-full px-4 py-3 text-sm font-bold text-[#323130] bg-white border border-[#edebe9] shadow-sm"
-                    ></textarea>
+                  <div className="p-4 bg-[#faf9f8] rounded-sm flex items-center justify-between">
+                     <span className="text-[10px] font-black uppercase text-[#605e5c]">Prize Holder?</span>
+                     <input type="checkbox" checked={formData.isPrized} onChange={e => setFormData({...formData, isPrized: e.target.checked})} className="w-6 h-6 rounded-sm text-[#0078d4]" />
                   </div>
-                  <div className="flex items-center gap-4 py-4 bg-[#faf9f8] px-5 rounded-sm border border-[#edebe9]">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <input 
-                        type="checkbox" 
-                        checked={formData.isPrized} 
-                        onChange={e => setFormData({...formData, isPrized: e.target.checked})} 
-                        className="w-4 h-4 rounded-sm text-[#0078d4] cursor-pointer" 
-                      />
-                      <span className="text-[10px] font-bold text-[#323130] uppercase tracking-widest group-hover:text-[#0078d4]">Already Prized?</span>
-                    </label>
-                    {formData.isPrized && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-[#605e5c] uppercase">Month:</span>
-                        <input type="number" placeholder="M#" value={formData.prizedMonth} onChange={e => setFormData({...formData, prizedMonth: Number(e.target.value)})} className="w-16 px-2 py-1.5 text-xs border border-[#edebe9] rounded-sm font-bold text-[#a4262c]" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-[#f3f2f1] sticky bottom-0 bg-white">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 border border-[#edebe9] rounded-sm font-bold text-[10px] uppercase tracking-[0.2em] text-[#605e5c] hover:bg-[#faf9f8] transition-colors">Abort Entry</button>
-                <button 
-                  type="submit" 
-                  disabled={isSlotFull}
-                  className={`flex-1 py-4 rounded-sm font-bold text-[10px] uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 ${isSlotFull ? 'bg-[#c8c6c4] text-[#f3f2f1] cursor-not-allowed' : 'bg-[#0078d4] text-white hover:bg-[#106ebe]'}`}
-                >
-                  Finalize Registry
-                </button>
-              </div>
+               </div>
+               <div className="pt-6 space-y-3">
+                  <button type="submit" disabled={isSlotFull} className="w-full h-14 bg-[#0078d4] text-white font-black uppercase text-sm tracking-[0.2em] shadow-xl active:scale-95 transition-all">
+                    Finalize Entry
+                  </button>
+               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* BULK ONBOARDING MODAL */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+          <div className="bg-white w-full max-w-lg h-[90vh] sm:h-auto rounded-t-xl sm:rounded-sm overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-bottom-10">
+            <div className="p-5 border-b border-[#edebe9] flex justify-between items-center bg-[#323130] text-white">
+               <div className="flex items-center gap-2">
+                 <FileSpreadsheet className="w-5 h-5" />
+                 <h3 className="font-black uppercase text-sm tracking-tight">Advanced Bulk Onboarding</h3>
+               </div>
+               <button onClick={() => setIsBulkModalOpen(false)} className="p-2"><X className="w-6 h-6" /></button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-container">
+               <div className="space-y-4">
+                  <div className="bg-[#f3f2f1] p-5 rounded-sm border-l-4 border-[#0078d4] flex gap-4">
+                     <Info className="w-5 h-5 text-[#0078d4] shrink-0" />
+                     <p className="text-[11px] font-bold text-[#605e5c] uppercase leading-relaxed">
+                        NEW: Add a <span className="text-[#0078d4]">"Chit Group Name"</span> column in your Excel to automatically assign members to different groups in one upload!
+                     </p>
+                  </div>
+
+                  <div>
+                     <label className="block text-[10px] font-black text-[#605e5c] uppercase mb-1 tracking-widest">1. Default Portfolio (Fallback)</label>
+                     <select 
+                        value={bulkTargetGroup} 
+                        onChange={e => setBulkTargetGroup(e.target.value)} 
+                        className="w-full h-14 px-4 bg-[#faf9f8] border-2 border-[#edebe9] font-black text-sm text-[#0078d4] focus:border-[#0078d4] outline-none"
+                     >
+                        <option value="">Select fallback group...</option>
+                        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                     </select>
+                     <p className="text-[9px] font-bold text-[#a19f9d] uppercase mt-2">Used if "Chit Group Name" column is missing in file.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                     <button 
+                        onClick={handleDownloadTemplate}
+                        className="w-full h-14 bg-white border-2 border-[#edebe9] text-[#323130] flex items-center justify-center gap-3 rounded-sm font-black text-[10px] uppercase tracking-widest hover:bg-[#faf9f8]"
+                     >
+                        <FileDown className="w-5 h-5 text-[#0078d4]" /> Download Advanced Template
+                     </button>
+                  </div>
+
+                  <div className="pt-6 border-t border-[#edebe9]">
+                     <label className="block text-[10px] font-black text-[#605e5c] uppercase mb-4 tracking-widest">2. Upload Completed File</label>
+                     <label className="w-full h-32 border-2 border-dashed border-[#edebe9] flex flex-col items-center justify-center gap-2 rounded-sm cursor-pointer hover:bg-[#faf9f8] transition-colors">
+                        <Upload className="w-8 h-8 text-[#a19f9d]" />
+                        <span className="text-[10px] font-black uppercase text-[#605e5c]">Click to Choose .xlsx File</span>
+                        <input 
+                           type="file" 
+                           accept=".xlsx, .xls, .csv" 
+                           onChange={handleExcelImport} 
+                           ref={fileInputRef}
+                           className="hidden" 
+                        />
+                     </label>
+                  </div>
+               </div>
+
+               <div className="bg-[#faf9f8] p-4 flex items-center gap-3 rounded-sm">
+                  <AlertCircle className="w-4 h-4 text-[#a19f9d]" />
+                  <p className="text-[9px] font-bold text-[#a19f9d] uppercase">System maps names automatically. Ensure Portfolio Names match exactly.</p>
+               </div>
+            </div>
           </div>
         </div>
       )}

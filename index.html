@@ -3,12 +3,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>GTS CHITS - Professional Chit Fund Management</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0078d4">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --ms-blue: #0078d4;
@@ -19,46 +20,60 @@
             --ms-text-secondary: #605e5c;
             --ms-bg: #faf9f8;
         }
+        
+        /* Modern Reset */
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         body { 
             font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; 
             -webkit-tap-highlight-color: transparent;
             background-color: var(--ms-bg);
             color: var(--ms-text);
+            margin: 0;
+            padding: 0;
+            /* Using dynamic viewport height for better mobile UI stability */
+            min-height: 100dvh;
         }
         
-        /* Corporate Input Standard */
+        /* Mobile Accessibility Refinements */
         input, select, textarea {
-            background-color: #ffffff !important;
-            color: #323130 !important;
-            border: 1px solid #edebe9 !important;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 16px !important; /* Prevents iOS/Android auto-zoom on focus */
+            min-height: 48px; /* Better touch target */
         }
-        input:focus, select:focus, textarea:focus {
-            border-color: var(--ms-blue) !important;
-            box-shadow: 0 0 0 1px var(--ms-blue) !important;
-            outline: none !important;
-        }
-        input::placeholder {
-            color: #a19f9d !important;
+
+        button {
+            min-height: 44px;
+            cursor: pointer;
+            user-select: none;
         }
 
         /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f3f2f1; }
-        ::-webkit-scrollbar-thumb { background: #c8c6c4; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a19f9d; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c8c6c4; border-radius: 10px; }
 
         @media print {
             .no-print { display: none !important; }
             body, html, #root { height: auto !important; overflow: visible !important; background: white !important; }
             #report-printable-area { border: none !important; box-shadow: none !important; width: 100% !important; }
-            tr { break-inside: avoid; }
         }
         
-        html, body, #root {
-            height: 100%;
+        #root {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
             width: 100%;
             overflow: hidden;
+        }
+
+        .scroll-container {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex: 1;
         }
     </style>
 <script type="importmap">
@@ -68,7 +83,8 @@
     "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "recharts": "https://esm.sh/recharts@^3.7.0"
+    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "xlsx": "https://esm.sh/xlsx@0.18.5"
   }
 }
 </script>

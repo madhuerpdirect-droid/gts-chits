@@ -5,16 +5,21 @@ import { Member, ChitGroup } from './types';
  * Strips all non-digit characters and extracts only the last 10 digits.
  */
 export const cleanPhoneNumber = (phone: string): string => {
+  if (!phone) return '';
   const digits = phone.replace(/\D/g, '');
   return digits.slice(-10);
 };
 
 /**
- * Generates a direct WhatsApp link with the 91 prefix and no '+' symbol.
+ * Generates a WhatsApp universal link using the wa.me domain.
+ * This is the most reliable method for Indian mobile users to trigger the app.
  */
 export const getWhatsAppUrl = (phone: string, message: string): string => {
   const cleaned = cleanPhoneNumber(phone);
+  // Strictly enforce 91 prefix for Indian numbers
   const finalPhone = cleaned.length === 10 ? `91${cleaned}` : cleaned;
+  
+  // wa.me is the modern standard for universal linking
   return `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
 };
 
@@ -70,7 +75,15 @@ export const generateReminderMessage = (member: Member, group: ChitGroup, month:
   dueDate.setMonth(dueDate.getMonth() + month - 1);
   const formattedDueDate = dueDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  return `*GTS CHITS - PAYMENT REMINDER*\n\nDear *${member.name}*,\n\nMonthly chit payment for Month ${month} is due.\n\n*Group:* ${group.name}\n*Amount:* ₹${amount.toLocaleString()}\n*Due Date:* ${formattedDueDate}\n\nKindly ignore if already paid.\n\nThank you,\n*GTS CHITS*`;
+  return `*GTS CHITS - PAYMENT DUE*\n\n` +
+    `Dear *${member.name}*,\n\n` +
+    `Your installment for *Month ${month}* is pending.\n\n` +
+    `*Group:* ${group.name}\n` +
+    `*Amount:* ₹${amount.toLocaleString()}\n` +
+    `*Due Date:* ${formattedDueDate}\n\n` +
+    `Please settle via UPI or Cash.\n\n` +
+    `Thank you,\n` +
+    `*GTS CHITS*`;
 };
 
 export const generateForecastMessage = (member: Member, group: ChitGroup, currentMonth: number): string => {
