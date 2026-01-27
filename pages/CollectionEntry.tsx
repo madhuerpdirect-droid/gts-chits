@@ -109,9 +109,10 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
       `*Status:* FULLY SETTLED\n\n` +
       `Thank you.\n*GTS CHITS*`;
 
-    // Direct universal link is most robust for mobile
     const url = getWhatsAppUrl(member.phone, message);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // CRITICAL: Using window.location.href triggers the app intent on Android/iOS
+    // while window.open often defaults to the web browser interface.
+    window.location.href = url;
   };
 
   const sendUpiRequest = (member: Member, amount: number) => {
@@ -130,7 +131,8 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
       `*GTS CHITS*`;
     
     const url = getWhatsAppUrl(member.phone, message);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // Using location.href ensures the mobile device's app association system captures the request.
+    window.location.href = url;
   };
 
   return (

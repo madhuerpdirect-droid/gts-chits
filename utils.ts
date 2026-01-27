@@ -11,15 +11,15 @@ export const cleanPhoneNumber = (phone: string): string => {
 };
 
 /**
- * Generates a WhatsApp universal link using the wa.me domain.
- * This is the most reliable method for Indian mobile users to trigger the app.
+ * Generates a WhatsApp universal link. 
+ * Using wa.me with window.location.href is the most reliable way 
+ * to trigger the mobile app instead of the web interface.
  */
 export const getWhatsAppUrl = (phone: string, message: string): string => {
   const cleaned = cleanPhoneNumber(phone);
-  // Strictly enforce 91 prefix for Indian numbers
+  // Strictly enforce 91 prefix for Indian numbers as required by WhatsApp API
   const finalPhone = cleaned.length === 10 ? `91${cleaned}` : cleaned;
   
-  // wa.me is the modern standard for universal linking
   return `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
 };
 

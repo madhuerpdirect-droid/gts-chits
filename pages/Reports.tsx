@@ -70,7 +70,8 @@ const Reports: React.FC<ReportsProps> = ({ groups, members, payments }) => {
     
     const phone = member?.phone && cleanPhoneNumber(member.phone).length === 10 ? member.phone : '';
     const url = getWhatsAppUrl(phone, message);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // Direct location assignment is better for mobile intent triggering
+    window.location.href = url;
   };
 
   const renderReportContent = () => {
@@ -243,7 +244,8 @@ const DueReport: React.FC<any> = ({ members, payments, groups, filters }) => {
     const amount = calculateExpectedAmount(group, member, month);
     const msg = generateReminderMessage(member, group, month, amount);
     const url = getWhatsAppUrl(member.phone, msg);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // CRITICAL: window.location.href ensures the app is launched directly on Android
+    window.location.href = url;
   };
 
   return (
