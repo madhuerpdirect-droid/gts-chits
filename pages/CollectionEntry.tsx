@@ -195,7 +195,6 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
                       {member.name.charAt(0)}
                     </div>
                     <div>
-                      {/* Fixed: Added missing opening bracket to h4 tag */}
                       <h4 className="text-[15px] font-black leading-tight">{member.name}</h4>
                       <p className="text-[10px] font-bold text-[#a19f9d] uppercase tracking-tighter mt-1">{member.phone}</p>
                       <div className="flex items-center gap-2 mt-1">
