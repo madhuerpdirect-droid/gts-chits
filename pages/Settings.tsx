@@ -14,9 +14,11 @@ interface SettingsPageProps {
   setPayments: (p: Payment[]) => void;
   upiId: string;
   setUpiId: (v: string) => void;
+  whatsappUseWeb: boolean;
+  setWhatsappUseWeb: (v: boolean) => void;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, setGroups, setMembers, setPayments, upiId, setUpiId }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, setGroups, setMembers, setPayments, upiId, setUpiId, whatsappUseWeb, setWhatsappUseWeb }) => {
   const [lastBackup, setLastBackup] = useState<string | null>(getLastBackupDate());
   const [testPhone, setTestPhone] = useState('');
 
@@ -57,7 +59,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, 
    */
   const triggerWhatsAppTest = () => {
     if (testPhone.length !== 10) return alert('Enter 10-digit mobile number to test.');
-    const url = getWhatsAppUrl(testPhone, "GTS CHITS: Connectivity Test Success! WhatsApp is linked to your APK correctly.");
+    const url = getWhatsAppUrl(testPhone, "GTS CHITS: Connectivity Test Success! WhatsApp is linked to your APK correctly.", whatsappUseWeb);
     const link = document.createElement('a');
     link.href = url;
     link.target = '_blank';
@@ -118,13 +120,26 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, 
           </div>
         </div>
 
-        {/* WhatsApp APK Diagnostic */}
+        {/* WhatsApp APK Diagnostic & Preference */}
         <div className="bg-white p-8 rounded-sm border border-[#edebe9] shadow-sm flex flex-col">
           <div className="flex items-center gap-3 mb-6 border-b border-[#f3f2f1] pb-4">
             <MessageSquare className="w-4 h-4 text-[#107c10]" />
-            <h3 className="font-bold text-[#323130] uppercase text-[10px] tracking-widest">WhatsApp APK Diagnostic</h3>
+            <h3 className="font-bold text-[#323130] uppercase text-[10px] tracking-widest">WhatsApp Routing Preference</h3>
           </div>
-          <div className="space-y-4 flex-1">
+          <div className="space-y-6 flex-1">
+             <div className="flex items-center gap-3 p-3 bg-[#faf9f8] rounded-sm border border-[#edebe9]">
+                <input 
+                  type="checkbox" 
+                  id="wa-mode"
+                  checked={whatsappUseWeb}
+                  onChange={e => setWhatsappUseWeb(e.target.checked)}
+                  className="w-5 h-5 accent-[#107c10] cursor-pointer"
+                />
+                <label htmlFor="wa-mode" className="text-[10px] font-black uppercase tracking-widest text-[#323130] cursor-pointer">
+                  Route via WhatsApp Web (Desktop)
+                </label>
+             </div>
+
              <div className="flex gap-2">
                 <input 
                   type="tel"
@@ -142,7 +157,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, 
                 </button>
              </div>
              <p className="text-[9px] text-[#605e5c] font-bold uppercase leading-relaxed">
-                CROSS-CHECK: Enter your own number and tap "Test Intent". If it opens WhatsApp, the system is fully compatible with your Android APK.
+                Choose "Web" for desktop browser use, or uncheck for native Android/iOS app routing.
              </p>
           </div>
         </div>

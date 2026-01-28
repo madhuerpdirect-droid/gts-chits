@@ -11,9 +11,10 @@ interface CollectionEntryProps {
   payments: Payment[];
   setPayments: React.Dispatch<React.SetStateAction<Payment[]>>;
   upiId: string;
+  whatsappUseWeb: boolean;
 }
 
-const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setMembers, payments, setPayments, upiId }) => {
+const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setMembers, payments, setPayments, upiId, whatsappUseWeb }) => {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,14 +97,11 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
   };
 
   /**
-   * Final Android Intent Fix:
-   * Uses a dynamically created anchor tag with target="_blank" and noopener.
-   * This is the most reliable way to force the Android System to intercept 
-   * the URL and open the native WhatsApp application instead of navigating 
-   * the current WebView window.
+   * Universal WhatsApp trigger.
+   * Respects the whatsappUseWeb preference from settings.
    */
   const triggerWhatsApp = (phone: string, message: string) => {
-    const url = getWhatsAppUrl(phone, message);
+    const url = getWhatsAppUrl(phone, message, whatsappUseWeb);
     const link = document.createElement('a');
     link.href = url;
     link.target = '_blank';
@@ -197,6 +195,7 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
                       {member.name.charAt(0)}
                     </div>
                     <div>
+                      {/* Fixed: Added missing opening bracket to h4 tag */}
                       <h4 className="text-[15px] font-black leading-tight">{member.name}</h4>
                       <p className="text-[10px] font-bold text-[#a19f9d] uppercase tracking-tighter mt-1">{member.phone}</p>
                       <div className="flex items-center gap-2 mt-1">

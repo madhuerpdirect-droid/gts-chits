@@ -37,6 +37,7 @@ const App: React.FC = () => {
   const [members, setMembers] = useState<Member[]>(() => loadData('gts_chits_members', []));
   const [payments, setPayments] = useState<Payment[]>(() => loadData('gts_chits_payments', []));
   const [upiId, setUpiId] = useState<string>(() => localStorage.getItem('gts_chits_upi') || '');
+  const [whatsappUseWeb, setWhatsappUseWeb] = useState<boolean>(() => localStorage.getItem('gts_chits_wa_web') === 'true');
 
   // Safety Monitor State
   const [needsBackup, setNeedsBackup] = useState(false);
@@ -68,6 +69,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('gts_chits_upi', upiId);
   }, [upiId]);
+
+  useEffect(() => {
+    localStorage.setItem('gts_chits_wa_web', String(whatsappUseWeb));
+  }, [whatsappUseWeb]);
 
   const checkBackupStatus = () => {
     const lastBackup = getLastBackupDate();
@@ -111,9 +116,10 @@ const App: React.FC = () => {
           payments={payments} 
           setPayments={setPayments} 
           upiId={upiId}
+          whatsappUseWeb={whatsappUseWeb}
         />;
       case 'Reports':
-        return <Reports groups={groups} members={members} payments={payments} />;
+        return <Reports groups={groups} members={members} payments={payments} whatsappUseWeb={whatsappUseWeb} />;
       case 'Settings':
         return <SettingsPage 
           groups={groups} 
@@ -124,6 +130,8 @@ const App: React.FC = () => {
           setPayments={setPayments} 
           upiId={upiId}
           setUpiId={setUpiId}
+          whatsappUseWeb={whatsappUseWeb}
+          setWhatsappUseWeb={setWhatsappUseWeb}
         />;
       default:
         return <Dashboard groups={groups} members={members} payments={payments} />;

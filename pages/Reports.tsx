@@ -9,9 +9,10 @@ interface ReportsProps {
   groups: ChitGroup[];
   members: Member[];
   payments: Payment[];
+  whatsappUseWeb: boolean;
 }
 
-const Reports: React.FC<ReportsProps> = ({ groups, members, payments }) => {
+const Reports: React.FC<ReportsProps> = ({ groups, members, payments, whatsappUseWeb }) => {
   const [activeReport, setActiveReport] = useState<ReportType>('Candidate');
   const [filters, setFilters] = useState({
     groupId: '',
@@ -61,10 +62,10 @@ const Reports: React.FC<ReportsProps> = ({ groups, members, payments }) => {
   };
 
   /**
-   * Universal WhatsApp trigger with Intent Fix.
+   * Universal WhatsApp trigger with Preference Fix.
    */
   const triggerWhatsApp = (phone: string, message: string) => {
-    const url = getWhatsAppUrl(phone, message);
+    const url = getWhatsAppUrl(phone, message, whatsappUseWeb);
     const link = document.createElement('a');
     link.href = url;
     link.target = '_blank';

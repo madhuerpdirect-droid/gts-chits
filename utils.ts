@@ -11,15 +11,16 @@ export const cleanPhoneNumber = (phone: string): string => {
 };
 
 /**
- * Generates an Official WhatsApp API Link.
- * Using api.whatsapp.com/send is more robust for Android WebViews (APKs) 
- * as it avoids the immediate redirect to the whatsapp:// protocol.
+ * Generates a WhatsApp Link.
+ * Mode 'app' (default) uses api.whatsapp.com which is robust for mobile app triggers.
+ * Mode 'web' uses web.whatsapp.com specifically for desktop browser routing.
  */
-export const getWhatsAppUrl = (phone: string, message: string): string => {
+export const getWhatsAppUrl = (phone: string, message: string, useWeb: boolean = false): string => {
   const cleaned = cleanPhoneNumber(phone);
   const finalPhone = `91${cleaned}`;
   const encodedText = encodeURIComponent(message);
-  return `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodedText}`;
+  const baseUrl = useWeb ? 'https://web.whatsapp.com/send' : 'https://api.whatsapp.com/send';
+  return `${baseUrl}?phone=${finalPhone}&text=${encodedText}`;
 };
 
 /**
