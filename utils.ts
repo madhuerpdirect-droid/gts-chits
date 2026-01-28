@@ -12,7 +12,7 @@ export const cleanPhoneNumber = (phone: string): string => {
 
 /**
  * Generates a WhatsApp Link.
- * Mode 'app' (default) uses whatsapp:// for direct native app routing in APKs.
+ * Mode 'app' (default) now uses https://wa.me/ protocol for standard mobile routing.
  * Mode 'web' uses web.whatsapp.com specifically for desktop browser routing.
  */
 export const getWhatsAppUrl = (phone: string, message: string, useWeb: boolean = false): string => {
@@ -26,10 +26,10 @@ export const getWhatsAppUrl = (phone: string, message: string, useWeb: boolean =
 
   /**
    * For Native App / APK routing:
-   * Using the whatsapp:// scheme allows Android WebViews to intercept the URL
-   * and trigger the native application via Intent.ACTION_VIEW.
+   * Replaced whatsapp://send with https://wa.me/ protocol as per user request
+   * to fix compatibility issues in the mobile native app environment.
    */
-  return `whatsapp://send?phone=${finalPhone}&text=${encodedText}`;
+  return `https://wa.me/${finalPhone}?text=${encodedText}`;
 };
 
 /**
