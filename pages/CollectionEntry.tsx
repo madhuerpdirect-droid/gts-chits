@@ -96,23 +96,21 @@ const CollectionEntry: React.FC<CollectionEntryProps> = ({ groups, members, setM
   };
 
   /**
-   * Final WhatsApp Fix for APKs:
-   * Instead of window.open, which many WebViews handle by opening an internal window,
-   * we use window.location.assign. This tells the WebView to "navigate" to the link, 
-   * which then allows the Android System's intent-filter to catch the HTTPS link 
-   * and open the WhatsApp app automatically.
+   * Final Android Intent Fix:
+   * Uses a dynamically created anchor tag with target="_blank" and noopener.
+   * This is the most reliable way to force the Android System to intercept 
+   * the URL and open the native WhatsApp application instead of navigating 
+   * the current WebView window.
    */
   const triggerWhatsApp = (phone: string, message: string) => {
     const url = getWhatsAppUrl(phone, message);
-    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-      // Direct navigation is best for WebViews to trigger external intents
-      window.location.assign(url);
-    } else {
-      // Desktop still works best with a new tab
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleShareReceipt = (memberId: string) => {

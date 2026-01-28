@@ -53,14 +53,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ groups, members, payments, 
   };
 
   /**
-   * Diagnostic Trigger:
-   * Uses a hidden anchor with target="_blank" to force APKs to pass 
-   * the link to the Android OS intent system.
+   * Diagnostic Trigger with Intent Fix.
    */
   const triggerWhatsAppTest = () => {
     if (testPhone.length !== 10) return alert('Enter 10-digit mobile number to test.');
     const url = getWhatsAppUrl(testPhone, "GTS CHITS: Connectivity Test Success! WhatsApp is linked to your APK correctly.");
-    
     const link = document.createElement('a');
     link.href = url;
     link.target = '_blank';
